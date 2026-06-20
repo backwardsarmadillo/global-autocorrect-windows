@@ -6,3 +6,4 @@ build/
 dist/
 *.spec
 GlobalAutocorrect.exe
+frequency_dictionary_en_82_765.txt
