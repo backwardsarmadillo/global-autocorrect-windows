@@ -44,7 +44,7 @@ That creates `GlobalAutocorrect.exe` and `global-autocorrect-windows.zip`.
 
 ## Controls
 
-- Pause/resume: `Ctrl+Alt+A`
+- Pause/resume: `Ctrl+Alt+A` (a short rising beep means enabled, a lower beep means paused)
 - Exit until next launch: `Ctrl+Alt+Esc`
 - Start manually: `start_global_autocorrect.ps1`
 - Stop manually: `stop_global_autocorrect.ps1`
@@ -62,6 +62,8 @@ Useful fields:
 - `manual_replacements`: exact typo fixes.
 - `never_correct`: words to leave alone.
 - `blocked_processes`: apps where autocorrect should disable itself.
+- `idle_reset_seconds`: discard a pending word after this many seconds of no typing (set `0` to disable).
+- `toggle_beep`: play a tone on pause/resume so you can hear the current state.
 - `log_corrections`: off by default for privacy.
 
 Example:
@@ -92,7 +94,8 @@ It does use a global keyboard hook so it can detect word boundaries and replace 
 - It does not use Microsoft Teams' private autocorrect engine.
 - It is a global keyboard hook that simulates backspace and typing.
 - It may behave badly in some apps with custom input fields.
-- It cannot reliably detect password fields, so sensitive apps are blocked by process name instead.
+- It cannot reliably detect password fields, so sensitive apps are blocked by process name instead. Note this is by *process*, so a password typed into a **web** login form in your browser is not specifically protected. In practice that exposure is small: anything containing a digit or symbol is ignored, and a value submitted with Enter is never corrected. Still, if in doubt, pause with `Ctrl+Alt+A` before entering secrets in the browser.
+- Clicking the mouse resets the pending word, so a correction will not fire across a caret you moved by clicking.
 - It is intentionally aggressive; add false positives to `never_correct` or `manual_replacements`.
 
 ## How It Works

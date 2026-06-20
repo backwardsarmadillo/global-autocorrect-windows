@@ -3,6 +3,8 @@
   "log_corrections": false,
   "max_edit_distance": 3,
   "min_word_length": 3,
+  "idle_reset_seconds": 3,
+  "toggle_beep": true,
   "hotkeys": {
     "toggle": "ctrl+alt+a",
     "exit": "ctrl+alt+esc"

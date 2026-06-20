@@ -6,9 +6,11 @@ import re
 import sys
 import threading
 import time
+import winsound
 from pathlib import Path
 
 import keyboard
+import mouse
 import psutil
 from symspellpy import SymSpell, Verbosity
 
@@ -25,6 +27,8 @@ DEFAULT_CONFIG = {
     "log_corrections": False,
     "max_edit_distance": 3,
     "min_word_length": 3,
+    "idle_reset_seconds": 3,
+    "toggle_beep": True,
     "hotkeys": {
         "toggle": "ctrl+alt+a",
         "exit": "ctrl+alt+esc",
@@ -175,8 +179,18 @@ def load_config():
 config = load_config()
 enabled = bool(config["enabled"])
 buffer = []
+last_keypress = 0.0
 replacing = False
 should_exit = threading.Event()
+
+
+def reset_buffer(*_args):
+    # Any caret-moving event (mouse click, idle gap) invalidates the pending
+    # word, because our character-count-based backspacing assumes the caret is
+    # still at the end of what we have buffered. This mirrors AutoHotkey's
+    # default of clearing the hotstring recognizer on every mouse click.
+    global buffer
+    buffer = []
 
 
 def foreground_process_name():
@@ -286,13 +300,22 @@ def replace_previous_word(word, separator):
 
 
 def on_press(event):
-    global buffer
+    global buffer, last_keypress
     if replacing:
         return
 
     name = event.name
     if name in ("shift", "ctrl", "alt", "alt gr", "windows", "menu"):
         return
+
+    # Drop a stale pending word after an inactivity gap. A long pause usually
+    # means the user looked away, clicked, or switched focus, so the buffer can
+    # no longer be trusted to match the text in front of the caret.
+    now = time.monotonic()
+    idle_limit = float(config.get("idle_reset_seconds", 3) or 0)
+    if buffer and idle_limit > 0 and (now - last_keypress) > idle_limit:
+        buffer = []
+    last_keypress = now
 
     if not enabled or is_blocked_context():
         buffer = []
@@ -329,6 +352,13 @@ def toggle():
     buffer = []
     logging.info("Global autocorrect %s", "enabled" if enabled else "paused")
     print(f"Global autocorrect {'enabled' if enabled else 'paused'}")
+    if config.get("toggle_beep", True):
+        # Audible state cue: rising tone on enable, falling tone on pause. The
+        # windowless exe has no other way to tell the user which state it is in.
+        try:
+            winsound.Beep(880 if enabled else 440, 120)
+        except RuntimeError:
+            pass
 
 
 def main():
@@ -337,10 +367,14 @@ def main():
     print(f"Exit:   {config['hotkeys']['exit']}")
     print(f"Log:    {LOG_PATH}")
     keyboard.on_press(on_press)
+    # Reset the pending word on any mouse click, since a click moves the caret
+    # and would otherwise make us backspace over unrelated text.
+    mouse.on_button(reset_buffer, buttons=(mouse.LEFT, mouse.MIDDLE, mouse.RIGHT))
     keyboard.add_hotkey(config["hotkeys"]["toggle"], toggle)
     keyboard.add_hotkey(config["hotkeys"]["exit"], should_exit.set)
     should_exit.wait()
     keyboard.unhook_all()
+    mouse.unhook_all()
     logging.info("Global autocorrect exited")
 
 
