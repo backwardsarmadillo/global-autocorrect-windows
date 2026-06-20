@@ -1,0 +1,1 @@
+# global-autocorrect-windows
