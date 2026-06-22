@@ -7,7 +7,9 @@ This is a small local background tool that watches typed words, then replaces ob
 ## What It Does
 
 - Corrects words after space or punctuation.
-- Uses a local SymSpell frequency dictionary.
+- Uses the **Windows spell-check engine** (the same suggestions behind the red squiggles) for candidates, and falls back to a bundled SymSpell dictionary if that API is unavailable.
+- **Context-aware**: ranks candidates by the previous word, keyboard-key adjacency, and word frequency — so it picks the word you meant, not just the most common one.
+- Leaves correctly spelled words alone (it only changes words Windows flags as misspelled).
 - Supports exact custom replacements in `global_autocorrect_config.json`.
 - Starts at sign-in after installation.
 - Can be paused instantly with `Ctrl+Alt+A`.
@@ -19,7 +21,7 @@ This is a small local background tool that watches typed words, then replaces ob
 2. Right-click `install.ps1`.
 3. Choose **Run with PowerShell**.
 
-If the release includes `GlobalAutocorrect.exe`, no Python install is needed. If the exe is not present, the installer falls back to Python 3.10+ and creates a local `.venv`.
+If the release includes `GlobalAutocorrect.exe`, no Python install is needed. If the exe is not present, the installer falls back to Python 3.10+ and creates a local `.venv` (installing `keyboard`, `mouse`, `psutil`, `symspellpy`, and `comtypes`). The Windows spell-check engine works on Windows 8 and later; the bundled exe includes everything it needs.
 
 Windows SmartScreen may warn on first launch because this is an unsigned community utility.
 
@@ -57,7 +59,10 @@ Edit `global_autocorrect_config.json`.
 
 Useful fields:
 
-- `max_edit_distance`: higher means more aggressive.
+- `engine`: `windows` (default; uses the Windows spell checker) or `symspell` (bundled dictionary only).
+- `correct_capitalized`: also correct Capitalized words (sentence starts). Set `false` to leave likely proper nouns alone.
+- `correct_real_words`: also correct already-valid words when context strongly disagrees (e.g. `their`/`there`). Off by default.
+- `max_edit_distance`: higher means more aggressive (SymSpell fallback only).
 - `min_word_length`: shorter means more aggressive.
 - `manual_replacements`: exact typo fixes.
 - `never_correct`: words to leave alone.
@@ -100,10 +105,10 @@ It does use a global keyboard hook so it can detect word boundaries and replace 
 
 ## How It Works
 
-The loop is simple:
+The loop:
 
 ```text
-typed word -> space/punctuation -> spell lookup -> backspace word -> type correction
+typed word -> space/punctuation -> spell-check -> rank candidates -> backspace word -> type correction
 ```
 
-The default engine is SymSpell with an English frequency dictionary. Exact replacements win before fuzzy dictionary guessing.
+Candidates come from the Windows spell-check API (`ISpellChecker`) by default, or the bundled SymSpell dictionary as a fallback. They are then re-ranked by keyboard-key adjacency, the previous word (bigram context), and overall frequency. Exact entries in `manual_replacements` win before any of that, and `never_correct` words are always left alone.

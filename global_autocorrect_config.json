@@ -1,8 +1,12 @@
 {
   "enabled": true,
   "log_corrections": false,
+  "engine": "windows",
   "max_edit_distance": 3,
-  "min_word_length": 3,
+  "min_word_length": 2,
+  "correct_capitalized": true,
+  "correct_real_words": false,
+  "auto_undo": false,
   "idle_reset_seconds": 3,
   "toggle_beep": true,
   "hotkeys": {

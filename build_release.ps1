@@ -38,6 +38,10 @@ $VenvPython = Join-Path $VenvDir "Scripts\python.exe"
 $DictSource = Join-Path $VenvDir "Lib\site-packages\symspellpy\frequency_dictionary_en_82_765.txt"
 Copy-Item $DictSource (Join-Path $ScriptDir "frequency_dictionary_en_82_765.txt") -Force
 
+# The bigram dictionary powers the context re-ranker; ship it next to the exe.
+$BigramSource = Join-Path $VenvDir "Lib\site-packages\symspellpy\frequency_bigramdictionary_en_243_342.txt"
+Copy-Item $BigramSource (Join-Path $ScriptDir "frequency_bigramdictionary_en_243_342.txt") -Force
+
 $ZipPath = Join-Path $ScriptDir "global-autocorrect-windows.zip"
 if (Test-Path $ZipPath) {
     Remove-Item -LiteralPath $ZipPath -Force
@@ -49,7 +53,9 @@ $ReleaseFiles = @(
     "requirements.txt",
     "GlobalAutocorrect.exe",
     "frequency_dictionary_en_82_765.txt",
+    "frequency_bigramdictionary_en_243_342.txt",
     "global_autocorrect.py",
+    "winspell.py",
     "global_autocorrect_config.json",
     "install.ps1",
     "uninstall.ps1",
