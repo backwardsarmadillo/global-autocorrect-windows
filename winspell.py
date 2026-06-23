@@ -143,7 +143,9 @@ def suggest(word, limit=8):
             item, fetched = enum.RemoteNext(1)
             if not fetched:
                 break
-            if item and item.lower() != word.lower():
+            # Keep capitalization-only fixes (e.g. "nokia" -> "Nokia"); only an
+            # exact-string match is a genuine no-op worth dropping.
+            if item and item != word:
                 out.append(item)
         return out
     except Exception:

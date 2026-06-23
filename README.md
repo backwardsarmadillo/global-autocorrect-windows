@@ -17,24 +17,18 @@ This is a small local background tool that watches typed words, then replaces ob
 
 ## Install
 
-1. Download and unzip the release.
-2. Right-click `install.ps1`.
-3. Choose **Run with PowerShell**.
+**Easiest (recommended):**
 
-If the release includes `GlobalAutocorrect.exe`, no Python install is needed. If the exe is not present, the installer falls back to Python 3.10+ and creates a local `.venv` (installing `keyboard`, `mouse`, `psutil`, `symspellpy`, and `comtypes`). The Windows spell-check engine works on Windows 8 and later; the bundled exe includes everything it needs.
+1. Download **`GlobalAutocorrectSetup.exe`** from the [latest release](https://github.com/backwardsarmadillo/global-autocorrect-windows/releases/latest).
+2. Double-click it. Windows SmartScreen will warn that it's unsigned — click **More info → Run anyway** (this is a free community tool with no code-signing certificate).
+3. Done. It installs just for your user (no admin needed), starts right away, and launches at every sign-in. Remove it any time from **Settings → Apps** or the Start Menu's *Uninstall Global Autocorrect*.
 
-Windows SmartScreen may warn on first launch because this is an unsigned community utility.
+**Portable / no installer:**
 
-## Download For Users
+1. Download `global-autocorrect-windows.zip` from the [latest release](https://github.com/backwardsarmadillo/global-autocorrect-windows/releases/latest) and unzip it.
+2. Right-click `install.ps1` → **Run with PowerShell**.
 
-Use `global-autocorrect-windows.zip` from the repo root or the latest release artifact. It includes:
-
-- `GlobalAutocorrect.exe`
-- the local frequency dictionary
-- install/start/stop/uninstall PowerShell scripts
-- editable config
-
-No Python install is needed when using the release zip.
+Both the installer and the zip bundle `GlobalAutocorrect.exe`, so **no Python is required**. If you instead run from source, the scripts fall back to Python 3.10+ and create a local `.venv` (installing `keyboard`, `mouse`, `psutil`, `symspellpy`, `comtypes`). The Windows spell-check engine works on Windows 8 and later.
 
 ## Build From Source
 

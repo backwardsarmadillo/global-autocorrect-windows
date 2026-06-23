@@ -315,12 +315,11 @@ def keyboard_distance(a, b):
     return dp[la][lb]
 
 
-# Blend weights for ranking candidates. Spelling proximity dominates; context
-# and raw frequency break ties; rank nudges us toward the engine's own ordering.
+# Blend weights for the SymSpell-fallback re-ranker. Spelling proximity
+# dominates; previous-word context and raw frequency break ties.
 _W_KB = 4.0
 _W_CTX = 1.3
 _W_FREQ = 1.0
-_W_RANK = 0.5
 
 
 def correction_for(word):
@@ -349,50 +348,47 @@ def correction_for(word):
     ):
         return word
 
-    # Gather candidates. Preferred engine is the Windows spell checker
-    # (Microsoft's dictionary, the same one behind the red squiggles), which
-    # also simply declines to flag correctly spelled words. SymSpell is the
-    # fallback when the API is unavailable.
-    win = winspell.suggest(lower) if config.get("engine", "windows") == "windows" else None
+    # Preferred engine is the Windows spell checker (Microsoft's dictionary, the
+    # same one behind the red squiggles). It declines to flag correctly spelled
+    # words, and its top suggestion is already vetted -- so we simply trust it.
+    # Re-ranking it with our own heuristics only ever made it worse (e.g. it
+    # turned "nokia" into "novia" instead of "Nokia").
+    if config.get("engine", "windows") == "windows":
+        win = winspell.suggest(lower)
+        if win is not None:
+            if not win:
+                return word  # Windows considers it correctly spelled
+            best = win[0]
+            if best == word:
+                return word
+            return apply_case(word, best)
+        # win is None: API unavailable, fall through to the SymSpell engine.
 
-    if win is not None:
-        if not win:
-            return word  # Windows considers it correctly spelled
-        candidates = win
-        counts = {c: spellchecker.words.get(c.lower(), 1) for c in candidates}
-        ranks = {c: i for i, c in enumerate(candidates)}
-    else:
-        found = spellchecker.lookup(
-            lower,
-            Verbosity.ALL,
-            max_edit_distance=int(config["max_edit_distance"]),
-            include_unknown=False,
-        )
-        if not found:
-            return word
-        found.sort(key=lambda s: (s.distance, -s.count))
-        found = found[:30]
-        candidates = [s.term for s in found]
-        counts = {s.term: s.count for s in found}
-        ranks = {s.term: i for i, s in enumerate(found)}
-        # Without Windows to vouch for it, guard correctly spelled words.
-        if lower in spellchecker.words and not config.get("correct_real_words", False):
-            return word
+    # SymSpell fallback: no trustworthy ordering, so we re-rank candidates
+    # ourselves by keyboard geometry + previous-word context + frequency.
+    found = spellchecker.lookup(
+        lower,
+        Verbosity.ALL,
+        max_edit_distance=int(config["max_edit_distance"]),
+        include_unknown=False,
+    )
+    if not found:
+        return word
+    if lower in spellchecker.words and not config.get("correct_real_words", False):
+        return word
+    found.sort(key=lambda s: (s.distance, -s.count))
 
-    # Re-rank the engine's candidates by keyboard geometry + context + frequency,
-    # nudged toward the engine's own ordering, and take the winner.
     best_term, best_score = None, float("inf")
-    for c in candidates:
-        cl = c.lower()
+    for s in found[:30]:
+        cl = s.term.lower()
         context = spellchecker.bigrams.get(f"{prev_word} {cl}", 0) if prev_word else 0
         score = (
             _W_KB * keyboard_distance(lower, cl)
             - _W_CTX * math.log10(context + 1)
-            - _W_FREQ * math.log10(counts[c] + 1)
-            + _W_RANK * ranks[c]
+            - _W_FREQ * math.log10(s.count + 1)
         )
         if score < best_score:
-            best_score, best_term = score, c
+            best_score, best_term = score, s.term
 
     if best_term is None or best_term.lower() == lower:
         return word
